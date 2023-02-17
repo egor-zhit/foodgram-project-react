@@ -1,14 +1,14 @@
 from django.urls import path, include
 from rest_framework import routers
 
-from api.views import ()
+from api.views import CastomUserViewset
 
 app_name = 'users'
 router = routers.DefaultRouter()
-router.register('users', )
+router.register('users',  CastomUserViewset, basename='users')
 
 urlpatterns = [
-    path('', include(router.urls)),
-    path('', include('djoser.urls')),
-    path('auth/', include('djoser.urls.authtoken')),
+   path('', include(router.urls)),
+   path('', include('djoser.urls')),
+   path('auth/', include('djoser.urls.authtoken')),
 ]

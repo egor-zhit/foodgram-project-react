@@ -1,14 +1,15 @@
 from django.db import models
 from django.core.validators import MinValueValidator
 
-from users.models import UserModel
+from users.models import User
 
 
 class IngredientsModel(models.Model):
     """Модель Ингредиенты."""
     name = models.CharField(
         max_length=200,
-        verbose_name='Название'
+        verbose_name='Название',
+        unique=True
         )
     measurement_unit = models.CharField(
         max_length=50,
@@ -22,26 +23,6 @@ class IngredientsModel(models.Model):
 
     def __str__(self):
         return f'{self.name}({self.measurement_unit})'
-
-
-class IngredientsAmountModel(models):
-    """Модель колличество ингредиентов."""
-    ingredients = models.ForeignKey(
-        IngredientsModel,
-        related_name='amount',
-        verbose_name='ингредиент'
-    )
-    amount = models.FloatField(
-        'Количество',
-        validators=[MinValueValidator(0.01)]
-    )
-
-    class Meta:
-        verbose_name = 'Количество'
-        verbose_name_plural = 'Количество'
-
-    def __str__(self):
-        return f'{self.ingredients.name} - {self.amount}'
 
 
 class TagModel(models.Model):
@@ -80,20 +61,15 @@ class RecipesModel(models.Model):
         )
 
     author = models.ForeignKey(
-        UserModel,
+        User,
         on_delete=models.CASCADE,
         related_name='recipes',
-        verbose_name=''
+        verbose_name='Автор'
     )
     tags = models.ManyToManyField(
         TagModel,
         related_name='recipes',
         verbose_name='рецепт',
-        )
-    ingredients = models.ManyToManyField(
-        IngredientsAmountModel,
-        verbose_name='recipes',
-        related_name='ингредиенты'
         )
     image = models.ImageField(
         'картинка',
@@ -118,10 +94,32 @@ class RecipesModel(models.Model):
         return self.name
 
 
+class IngredientRecipeModel(models.Model):
+    """Модель для связки рецепта и ингредиента."""
+    ingredient = models.ForeignKey(IngredientsModel,
+                                   on_delete=models.CASCADE,
+                                   related_name='recipes',
+                                   verbose_name='Ингредиент')
+    recipe = models.ForeignKey(RecipesModel,
+                               on_delete=models.CASCADE,
+                               related_name='ingredients',
+                               verbose_name='Рецепт'
+                               )
+    amount = models.PositiveSmallIntegerField('Количество')
+
+    class Meta():
+        ordering = ['-id']
+        verbose_name = 'Ингредиент для рецепта'
+        verbose_name_plural = 'Ингредиенты для рецептов'
+
+    def __str__(self):
+        return f"Ингредиент: {self.ingredient}, Рецепт: {self.recipe}"
+
+
 class ShoppingCardModel(models.Model):
     """Модель списка покупок."""
     user = models.ForeignKey(
-        UserModel,
+        User,
         on_delete=models.CASCADE,
         related_name='shopping_carts',
         verbose_name='Пользователь',
@@ -149,7 +147,7 @@ class ShoppingCardModel(models.Model):
 class FavoriteModel(models.Model):
     """Модель избраное."""
     user = models.ForeignKey(
-        UserModel,
+        User,
         on_delete=models.CASCADE,
         related_name='favorites',
         verbose_name='Пользователь',
