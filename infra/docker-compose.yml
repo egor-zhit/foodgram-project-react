@@ -9,7 +9,7 @@ services:
       - ./.env
 
   backend:
-    image: backend/backend_foodgram
+    build: ../backend
     restart: always
     volumes:
       - static_value:/code/static/
@@ -21,7 +21,7 @@ services:
       - ./.env
 
   frontend:
-    image: frontend/frontend_foodgram
+    build: ../frontend
     volumes:
       - ../frontend/:/app/result_build/
   nginx:

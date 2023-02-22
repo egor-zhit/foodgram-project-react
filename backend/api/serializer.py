@@ -146,35 +146,35 @@ class ResipeSerializer(serializers.ModelSerializer):
             user=user, recipe=obj.id
             ).exists()
 
-    def validate(self, data):
-        ingredients = self.initial_data.get('ingredients')
-        ingredients_list = {}
-        if ingredients:
-            for ingredient in ingredients:
-                if ingredient.get('id') in ingredients_list:
-                    raise ValidationError(
-                        'Ингредиент может быть добавлен только один раз')
-                if int(ingredient.get('amount')) <= 0:
-                    raise ValidationError(
-                        'Добавьте количество для ингредиента больше 0'
-                    )
-                ingredients_list[ingredient.get('id')] = (
-                    ingredients_list.get('amount')
-                )
-            return data
-        else:
-            raise ValidationError('Добавьте ингредиент в рецепт')
+    def validate(self, value):
+        if not value:
+            raise ValidationError(
+                'Добавьте количество для ингредиента больше 0'
+            )
 
-    def ingredient_recipe_create(self, ingredients_set, recipe):
+        ingredients = [item['id'] for item in value]
+        for ingredient in ingredients:
+            if ingredients.count(ingredient) > 1:
+                raise ValidationError(
+                    'Ингредиент может быть добавлен только один раз'
+                )
+
+        return value
+
+    @staticmethod
+    def ingredient_recipe_create(ingredients_set, recipe):
+        ingredients_list = []
         for ingredient_get in ingredients_set:
-            ingredient = IngredientsModel.objects.get(
-                id=ingredient_get.get('id')
+            ingredient = ingredient_get['ingredient']['id']
+            amount = ingredient_get['amount']
+            ingredients_list.append(
+                IngredientRecipeModel(
+                    recipe=recipe,
+                    ingredient=ingredient,
+                    amount=amount
+                )
             )
-            IngredientRecipeModel.objects.create(
-                ingredient=ingredient,
-                recipe=recipe,
-                amount=ingredient_get.get('amount')
-            )
+        IngredientRecipeModel.objects.bulk_create(ingredients_list)
 
     def create(self, validated_data):
         image = validated_data.pop('image')

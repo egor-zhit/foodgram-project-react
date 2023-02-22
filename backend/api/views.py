@@ -1,29 +1,35 @@
 import io
 
-from rest_framework import viewsets
-from rest_framework import permissions, status
+from django.db.models import Sum
+from django.http import FileResponse
+from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.pdfgen.canvas import Canvas
+from rest_framework import viewsets
 from rest_framework import mixins
+from rest_framework import permissions, status, views
+from rest_framework.decorators import action
+from rest_framework.generics import get_object_or_404
+from rest_framework.response import Response
+
+from recipes.models import (
+    TagModel, RecipesModel, 
+    IngredientsModel, IngredientRecipeModel, 
+    ShoppingCardModel, FavoriteModel
+)
+from users.models import User, Subscriptions
+
+from .filters import IngredientSearchFilter, RecipeFilter
+from .pagination import LimitPagination
+from .permissions import AuthorOrReadOnly
 from .serializer import (
     TagSerialiser, IngredientsSerealizer,
     ResipeSerializer,
     SubscriberUserSerializers, SubscriberRecipeSerializers,
-    FavoriteSerializer, ShoppingCardModel
+    FavoriteSerializer, ShoppingCardSerializers
 )
-from .permissions import AuthorOrReadOnly
-from recipes.models import TagModel, RecipesModel, IngredientsModel, FavoriteModel
-from users.models import User, Subscriptions
-from .pagination import LimitPagination
-from .filters import IngredientSearchFilter, RecipeFilter
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.generics import get_object_or_404
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from reportlab.pdfgen.canvas import Canvas
-from django.http import FileResponse
-from django.db.models import Sum
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
 
 
 class CastomUserViewset(UserViewSet):
@@ -39,11 +45,12 @@ class CastomUserViewset(UserViewSet):
         )
         return self.get_paginated_response(serializer.data)
 
-    @action(
-        detail=True, methods=['post'],
-        permission_classes=[permissions.IsAuthenticated]
-    )
-    def subscribe(self, request, id=None):
+
+class SubscribeViewSet(views.APIView):
+    pagination_class = LimitPagination
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def post(self, request, id=None):
         user = request.user
         author = get_object_or_404(User, id=id)
         if user == author:
@@ -62,9 +69,8 @@ class CastomUserViewset(UserViewSet):
             queryset, context={'request': request}
         )
         return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-    @subscribe.mapping.delete
-    def subscribe_delete(self, request, id=None):
+    
+    def delete(self, request, id=None):
         user = request.user
         author = get_object_or_404(User, id=id)
         if not Subscriptions.objects.filter(user=user, author=author).exists():
@@ -105,7 +111,7 @@ class IngredientsViewset(TagViewset):
 
 class RecipesViewset(viewsets.ModelViewSet):
     """Получение, обновление, удаление и создания рецептов."""
-    queryset = RecipesModel.objects.all()
+    queryset = RecipesModel.objects.select_related('is_favourited', 'is_in_shopping_cart').all()
     permission_classes = (AuthorOrReadOnly,)
     serializer_class = ResipeSerializer
     pagination_class = LimitPagination
@@ -149,7 +155,7 @@ class RecipesViewset(viewsets.ModelViewSet):
         if request.method == 'POST':
             return self.add_obj(
                 model=ShoppingCardModel, pk=pk,
-                serializer=ShoppingCardModel,
+                serializer=ShoppingCardSerializers,
                 user=user
             )
         if request.method == 'DELETE':
@@ -169,7 +175,7 @@ class RecipesViewset(viewsets.ModelViewSet):
                 {'errors': 'Список рецептов пуст'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        ingredients = IngredientsModel.objects.filter(
+        ingredients = IngredientRecipeModel.objects.filter(
             recipe__shopping_carts__user=user).values(
                 'ingredient__name',
                 'ingredient__measurement_unit').order_by(
