@@ -96,15 +96,18 @@ class RecipesModel(models.Model):
 
 class IngredientRecipeModel(models.Model):
     """Модель для связки рецепта и ингредиента."""
-    ingredient = models.ForeignKey(IngredientsModel,
-                                   on_delete=models.CASCADE,
-                                   related_name='recipes',
-                                   verbose_name='Ингредиент')
-    recipe = models.ForeignKey(RecipesModel,
-                               on_delete=models.CASCADE,
-                               related_name='ingredients',
-                               verbose_name='Рецепт'
-                               )
+    ingredient = models.ForeignKey(
+        IngredientsModel,
+        on_delete=models.CASCADE,
+        related_name='recipes',
+        verbose_name='Ингредиент'
+    )
+    recipe = models.ForeignKey(
+        RecipesModel,
+        on_delete=models.CASCADE,
+        related_name='ingredients',
+        verbose_name='Рецепт'
+    )
     amount = models.PositiveSmallIntegerField('Количество')
 
     class Meta():

@@ -1,6 +1,7 @@
 import io
 
 from django.db.models import Sum
+from django.db.models import Exists, OuterRef
 from django.http import FileResponse
 from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet
@@ -23,7 +24,7 @@ from users.models import User, Subscriptions
 
 from .filters import IngredientSearchFilter, RecipeFilter
 from .pagination import LimitPagination
-from .permissions import AuthorOrReadOnly
+from .permissions import IsAdminOrReadOnly, IsAuthorOrReadOnly
 from .serializer import (
     TagSerialiser, IngredientsSerealizer,
     ResipeSerializer,
@@ -111,12 +112,29 @@ class IngredientsViewset(TagViewset):
 
 class RecipesViewset(viewsets.ModelViewSet):
     """Получение, обновление, удаление и создания рецептов."""
-    queryset = RecipesModel.objects.select_related('is_favourited', 'is_in_shopping_cart').all()
-    permission_classes = (AuthorOrReadOnly,)
+    permission_classes = (IsAdminOrReadOnly, IsAuthorOrReadOnly,)
     serializer_class = ResipeSerializer
     pagination_class = LimitPagination
     filter_backends = (DjangoFilterBackend,)
     filter_class = RecipeFilter
+
+    def get_queryset(self):
+        user = self.request.user
+        favorited = FavoriteModel.objects.filter(
+            user=user,
+            recipes=OuterRef('id'),
+        )
+        shopping_cart = ShoppingCardModel.objects.filter(
+            user=user, 
+            recipes=OuterRef('id'),
+        )
+        if user.is_anonymous:
+            return False
+        queryset = RecipesModel.objects.annotate(
+            is_favorited=Exists(favorited),
+            is_in_shopping_cart=Exists(shopping_cart)
+        )
+        return queryset
 
     @action(
         detail=True, methods=['post', 'delete'],
