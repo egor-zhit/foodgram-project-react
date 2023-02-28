@@ -57,17 +57,8 @@ class SubscriberUserSerializers(serializers.ModelSerializer):
     username = serializers.ReadOnlyField(source='author.username')
     first_name = serializers.ReadOnlyField(source='author.first_name')
     last_name = serializers.ReadOnlyField(source='author.last_name')
-    is_subscribed = serializers.SerializerMethodField()
     recipes = serializers.SerializerMethodField()
     recipes_count = serializers.SerializerMethodField()
-
-    def get_is_subscribed(self, obj):
-        user = self.context.get('request').user
-        if user.is_anonymous:
-            return False
-        return Subscriptions.objects.filter(
-            user=user, author=obj.author
-            ).exists()
 
     def get_recipes(self, obj):
         request = self.context.get('request')
@@ -129,8 +120,8 @@ class ResipeSerializer(serializers.ModelSerializer):
     author = CustomUserSerializers(read_only=True)
     image = Base64ImageField()
     ingredients = IngredientResipeSerializer(read_only=True, many=True)
-    is_favorited = serializers.CharField(read_only=True)
-    is_in_shopping_cart = serializers.CharField(read_only=True)
+    is_favorited = serializers.BooleanField(read_only=True, default=False)
+    is_in_shopping_cart = serializers.BooleanField(read_only=True, default=False)
 
     def validate(self, value):
         if not value:
@@ -163,15 +154,11 @@ class ResipeSerializer(serializers.ModelSerializer):
         IngredientRecipeModel.objects.bulk_create(ingredients_list)
 
     def create(self, validated_data):
-        image = validated_data.pop('image')
-        recipe = RecipesModel.objects.create(
-            image=image,
-            author=self.context['request'].user,
-            **validated_data
-        )
-        tags = self.initial_data.get('tags')
+        request = self.context.get('request', None)
+        tags = validated_data.pop('tags')
+        ingredients_set = validated_data.pop('ingredients')
+        recipe = RecipesModel.objects.create(author=request.user, **validated_data)
         recipe.tags.set(tags)
-        ingredients_set = self.initial_data.get('ingredients')
         self.ingredient_recipe_create(ingredients_set, recipe)
         return recipe
 
@@ -186,7 +173,7 @@ class ResipeSerializer(serializers.ModelSerializer):
         instance.tags.set(tags)
         instance.save()
         IngredientRecipeModel.objects.filter(recipe=instance).delete()
-        ingredients_set = self.initial_data.get('ingredients')
+        ingredients_set = self.initial_data.get('ingredient')
         self.ingredient_recipe_create(ingredients_set, instance)
         return instance
 

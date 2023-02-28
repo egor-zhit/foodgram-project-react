@@ -128,13 +128,14 @@ class RecipesViewset(viewsets.ModelViewSet):
             user=user, 
             recipes=OuterRef('id'),
         )
-        if user.is_anonymous:
-            return False
-        queryset = RecipesModel.objects.annotate(
-            is_favorited=Exists(favorited),
-            is_in_shopping_cart=Exists(shopping_cart)
-        )
-        return queryset
+        if user.is_authenticated:
+            return RecipesModel.objects.annotate(
+                is_favorited=Exists(favorited),
+                is_in_shopping_cart=Exists(shopping_cart)
+            )
+        
+        return RecipesModel.objects.all()
+    
 
     @action(
         detail=True, methods=['post', 'delete'],
@@ -142,11 +143,6 @@ class RecipesViewset(viewsets.ModelViewSet):
     )
     def favorite(self, request, pk=None):
         user = request.user
-        if not user.is_authenticated:
-            return Response(
-                {'errors': 'Пожалуйста войдите в личный кабинет'},
-                status=status.HTTP_401_UNAUTHORIZED
-            )
         if request.method == 'POST':
             return self.add_obj(
                 model=FavoriteModel, pk=pk,
@@ -165,11 +161,6 @@ class RecipesViewset(viewsets.ModelViewSet):
     )
     def shopping_cart(self, request, pk=None):
         user = request.user
-        if not user.is_authenticated:
-            return Response(
-                {'errors': 'Пожалуйста войдите в личный кабинет'},
-                status=status.HTTP_401_UNAUTHORIZED
-            )
         if request.method == 'POST':
             return self.add_obj(
                 model=ShoppingCardModel, pk=pk,
