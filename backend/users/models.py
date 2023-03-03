@@ -1,7 +1,6 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils.translation import gettext as _
-from .validators import username_validator
 
 class User(AbstractUser):
     USER = 'user'
@@ -13,7 +12,7 @@ class User(AbstractUser):
     email = models.EmailField(_('Электронная почта'),
                               max_length=254, unique=True)
     username = models.CharField(_('Логин пользователя'),
-                                unique=True, max_length=150)
+                                unique=True, max_length=150,)
     first_name = models.CharField(_('Имя'), max_length=150)
     last_name = models.CharField(_('Фамилия'), max_length=150)
     role = models.CharField(_('Статус'),

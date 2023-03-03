@@ -1,5 +1,6 @@
 import io
 
+from django.contrib.auth import get_user_model
 from django.db.models import Sum
 from django.db.models import Exists, OuterRef
 from django.http import FileResponse
@@ -20,11 +21,12 @@ from recipes.models import (
     IngredientsModel, IngredientRecipeModel, 
     ShoppingCardModel, FavoriteModel
 )
-from users.models import User, Subscriptions
+from users.models import Subscriptions
 
 from .filters import IngredientSearchFilter, RecipeFilter
+from .mixins import CustomRecipeModelViewSet
 from .pagination import LimitPagination
-from .permissions import IsAdminOrReadOnly, IsAuthorOrReadOnly
+from .permissions import AuthorOrReadOnly
 from .serializer import (
     TagSerialiser, IngredientsSerealizer,
     ResipeSerializer,
@@ -32,6 +34,7 @@ from .serializer import (
     FavoriteSerializer, ShoppingCardSerializers
 )
 
+User = get_user_model()
 
 class CastomUserViewset(UserViewSet):
     pagination_class = LimitPagination
@@ -40,7 +43,7 @@ class CastomUserViewset(UserViewSet):
     def subscriptions(self, request):
         queryset = Subscriptions.objects.filter(user=request.user)
         page = self.paginate_queryset(queryset)
-        serializer = SubscriberRecipeSerializers(
+        serializer = SubscriberUserSerializers(
             page, many=True,
             context={'request': request}
         )
@@ -51,9 +54,9 @@ class SubscribeViewSet(views.APIView):
     pagination_class = LimitPagination
     permission_classes = (permissions.IsAuthenticated,)
 
-    def post(self, request, id=None):
+    def post(self, request, pk=None):
         user = request.user
-        author = get_object_or_404(User, id=id)
+        author = get_object_or_404(User, id=pk)
         if user == author:
             return Response(
                 {'errors': 'Подписаться на себя невозможно'},
@@ -71,9 +74,9 @@ class SubscribeViewSet(views.APIView):
         )
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     
-    def delete(self, request, id=None):
+    def delete(self, request, pk=None):
         user = request.user
-        author = get_object_or_404(User, id=id)
+        author = get_object_or_404(User, id=pk)
         if not Subscriptions.objects.filter(user=user, author=author).exists():
             return Response(
                 {'errors': 'Отписка не возможна'},
@@ -110,9 +113,9 @@ class IngredientsViewset(TagViewset):
     search_fields = ('name',)
 
 
-class RecipesViewset(viewsets.ModelViewSet):
+class RecipesViewset(CustomRecipeModelViewSet):
     """Получение, обновление, удаление и создания рецептов."""
-    permission_classes = (IsAdminOrReadOnly, IsAuthorOrReadOnly,)
+    permission_classes = (AuthorOrReadOnly,)
     serializer_class = ResipeSerializer
     pagination_class = LimitPagination
     filter_backends = (DjangoFilterBackend,)
@@ -164,11 +167,11 @@ class RecipesViewset(viewsets.ModelViewSet):
         if request.method == 'POST':
             return self.add_obj(
                 model=ShoppingCardModel, pk=pk,
-                serializer=ShoppingCardSerializers,
+                serializers=ShoppingCardSerializers,
                 user=user
             )
         if request.method == 'DELETE':
-            return Response(
+            return self.del_obj(
                 model=ShoppingCardModel, pk=pk, user=user
             )
         return None
@@ -178,7 +181,7 @@ class RecipesViewset(viewsets.ModelViewSet):
     )
     def download_shopping_cart(self, request):
         user = request.user
-        dow_resipe = RecipesModel.objects.filter(shopping_cart__user=user)
+        dow_resipe = RecipesModel.objects.filter(shopping_carts__user=user)
         if not dow_resipe:
             return Response(
                 {'errors': 'Список рецептов пуст'},
