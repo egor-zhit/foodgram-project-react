@@ -1,7 +1,6 @@
+from api.views import CastomUserViewset, SubscribeViewSet
 from django.urls import include, path
 from rest_framework import routers
-
-from api.views import CastomUserViewset, SubscribeViewSet
 
 app_name = 'users'
 router = routers.DefaultRouter()
