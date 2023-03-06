@@ -40,9 +40,15 @@ jobs:
         - name: Push to Docker Hub
           uses: docker/build-push-action@v2 
           with:
-            context: ./backend
+            context: backend/
+              push: true
+              tags: egorzhit/foodgram_backend:latest
+        - name: Push frontend to Docker Hub
+          uses: docker/build-push-action@v2
+          with:
+            context: frontend/
             push: true
-            tags: egorzhit/foodgram:latest
+            tags: egorzhit/foodgram_frontend:latest
 
   deploy:
     runs-on: ubuntu-latest
@@ -55,9 +61,10 @@ jobs:
           username: ${{ secrets.USER }}
           key: ${{ secrets.SSH_KEY }}
           script: |
-            sudo docker pull egorzhit/foodgram
-            sudo docker-compose stop
-            sudo docker-compose rm backend
+            cd infra
+            sudo docker-compose down
+            sudo docker pull egorzhit/foodgram_frontend:latest
+            sudo docker pull egorzhit/foodgram_backend:latest
             touch .env
             echo DB_ENGINE=${{ secrets.DB_ENGINE }} >> .env
             echo DB_NAME=${{ secrets.DB_NAME }} >> .env
