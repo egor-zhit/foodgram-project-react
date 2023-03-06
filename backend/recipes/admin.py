@@ -1,10 +1,8 @@
 from django.contrib import admin
 
-from .models import (
-    IngredientsModel, TagModel,
-    IngredientRecipeModel, RecipesModel,
-    FavoriteModel, ShoppingCardModel,
-)
+from .models import (FavoriteModel, IngredientRecipeModel, IngredientsModel,
+                     RecipesModel, ShoppingCardModel, TagModel)
+
 
 class IngredientAdmin(admin.ModelAdmin):
     list_display = ('name', 'measurement_unit')

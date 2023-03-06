@@ -1,11 +1,10 @@
-from django.urls import path, include
-from rest_framework import routers
-
 from api.views import CastomUserViewset, SubscribeViewSet
+from django.urls import include, path
+from rest_framework import routers
 
 app_name = 'users'
 router = routers.DefaultRouter()
-router.register('users',  CastomUserViewset, basename='users')
+router.register('users', CastomUserViewset, basename='users')
 
 
 urlpatterns = [

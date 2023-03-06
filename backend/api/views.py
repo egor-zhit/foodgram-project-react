@@ -1,40 +1,32 @@
 import io
 
 from django.contrib.auth import get_user_model
-from django.db.models import Sum
-from django.db.models import Exists, OuterRef
+from django.db.models import Exists, OuterRef, Sum
 from django.http import FileResponse
 from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet
+from recipes.models import (FavoriteModel, IngredientRecipeModel,
+                            IngredientsModel, RecipesModel, ShoppingCardModel,
+                            TagModel)
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen.canvas import Canvas
-from rest_framework import viewsets
-from rest_framework import mixins
-from rest_framework import permissions, status, views
+from rest_framework import mixins, permissions, status, views, viewsets
 from rest_framework.decorators import action
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
-
-from recipes.models import (
-    TagModel, RecipesModel, 
-    IngredientsModel, IngredientRecipeModel, 
-    ShoppingCardModel, FavoriteModel
-)
 from users.models import Subscriptions
 
 from .filters import IngredientSearchFilter, RecipeFilter
 from .mixins import CustomRecipeModelViewSet
 from .pagination import LimitPagination
 from .permissions import AuthorOrReadOnly
-from .serializer import (
-    TagSerialiser, IngredientsSerealizer,
-    ResipeSerializer,
-    SubscriberUserSerializers, SubscriberRecipeSerializers,
-    FavoriteSerializer, ShoppingCardSerializers
-)
+from .serializer import (FavoriteSerializer, IngredientsSerealizer,
+                         ResipeSerializer, ShoppingCardSerializers,
+                         SubscriberUserSerializers, TagSerialiser)
 
 User = get_user_model()
+
 
 class CastomUserViewset(UserViewSet):
     pagination_class = LimitPagination
@@ -73,7 +65,7 @@ class SubscribeViewSet(views.APIView):
             queryset, context={'request': request}
         )
         return Response(serializer.data, status=status.HTTP_201_CREATED)
-    
+
     def delete(self, request, pk=None):
         user = request.user
         author = get_object_or_404(User, id=pk)
@@ -123,22 +115,21 @@ class RecipesViewset(CustomRecipeModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        favorited = FavoriteModel.objects.filter(
-            user=user,
-            recipes=OuterRef('id'),
-        )
-        shopping_cart = ShoppingCardModel.objects.filter(
-            user=user, 
-            recipes=OuterRef('id'),
-        )
         if user.is_authenticated:
+            favorited = FavoriteModel.objects.filter(
+                user=user,
+                recipes=OuterRef('id'),
+            )
+            shopping_cart = ShoppingCardModel.objects.filter(
+                user=user,
+                recipes=OuterRef('id'),
+            )
             return RecipesModel.objects.annotate(
                 is_favorited=Exists(favorited),
                 is_in_shopping_cart=Exists(shopping_cart)
             )
-        
+
         return RecipesModel.objects.all()
-    
 
     @action(
         detail=True, methods=['post', 'delete'],
@@ -175,7 +166,7 @@ class RecipesViewset(CustomRecipeModelViewSet):
                 model=ShoppingCardModel, pk=pk, user=user
             )
         return None
-    
+
     @action(
         detail=False, permission_classes=[permissions.IsAuthenticated],
     )
@@ -189,10 +180,10 @@ class RecipesViewset(CustomRecipeModelViewSet):
             )
         ingredients = IngredientRecipeModel.objects.filter(
             recipe__shopping_carts__user=user).values(
-                'ingredient__name',
-                'ingredient__measurement_unit').order_by(
-                'ingredient__name').annotate(amount=Sum('amount')
-        )
+            'ingredient__name',
+            'ingredient__measurement_unit').order_by(
+            'ingredient__name').annotate(amount=Sum('amount')
+                                         )
         buffer = io.BytesIO()
         canvas = Canvas(buffer)
         pdfmetrics.registerFont(
