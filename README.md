@@ -17,15 +17,15 @@
 - пользователи могут фильтровать рецепты по тегам, авторам.
 
 ----
-[Сайт приложения Foodgram](https://foodgram.telfia.com/)
+[Сайт приложения Foodgram](https://158.160.10.21/)
 
-- логин: `admin@foodgram.telfia.com`
-- пароль: `uPerhyChwHOuShArDleWoRtiONsoCr`
+- логин: ``
+- пароль: `Pass2020!`
 
-[Панель администратора](https://foodgram.telfia.com/admin/)
+[Панель администратора](https://158.160.10.21/admin/)
 
 - логин: `admin`
-- пароль: `uPerhyChwHOuShArDleWoRtiONsoCr`
+- пароль: `Pass2020!`
 ----
 
 # ️ Установка и запуск
@@ -33,7 +33,7 @@
 Для запуска приложения должен быть установлен [git](https://git-scm.com/) и [docker](https://www.docker.com/).
 
 ```bash
-git clone git@github.com:spaut33/foodgram-project-react.git
+git clone git@github.com:egor-zhit/foodgram-project-react.git
 cd foodgram-project-react
 ```
 
