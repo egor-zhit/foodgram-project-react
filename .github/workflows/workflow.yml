@@ -61,7 +61,6 @@ jobs:
           username: ${{ secrets.USER }}
           key: ${{ secrets.SSH_KEY }}
           script: |
-            cd infra
             sudo docker-compose down
             sudo docker pull egorzhit/foodgram_frontend:latest
             sudo docker pull egorzhit/foodgram_backend:latest
