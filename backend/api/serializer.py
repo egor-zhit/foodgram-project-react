@@ -135,27 +135,6 @@ class IngredientResipeSerializer(serializers.ModelSerializer):
         fields = ("id", "name", "measurement_unit", "amount")
 
 
-def validate_ingredients(value):
-    ingredients = value
-    if not ingredients:
-        raise ValidationError(
-            {"ingredients": "Нужен хотя бы один ингредиент!"}
-        )
-    ingredients_list = []
-    for item in ingredients:
-        ingredient = get_object_or_404(IngredientsModel, id=item["id"])
-        if ingredient in ingredients_list:
-            raise ValidationError(
-                {"ingredients": "Ингридиенты не могут повторяться!"}
-            )
-        if int(item["amount"]) <= 0:
-            raise ValidationError(
-                {"amount": "Количество ингредиента должно быть больше 0!"}
-            )
-        ingredients_list.append(ingredient)
-    return value
-
-
 def validate_tags(value):
     tags = value
     if not tags:
@@ -181,6 +160,26 @@ class ResipeSerializer(serializers.ModelSerializer):
     is_in_shopping_cart = serializers.BooleanField(
         read_only=True, default=False
     )
+
+    def validate_ingredients(self, value):
+        ingredients = value
+        if not ingredients:
+            raise ValidationError(
+                {"ingredients": "Нужен хотя бы один ингредиент!"}
+            )
+        ingredients_list = []
+        for item in ingredients:
+            ingredient = get_object_or_404(IngredientsModel, id=item["id"])
+            if ingredient in ingredients_list:
+                raise ValidationError(
+                    {"ingredients": "Ингридиенты не могут повторяться!"}
+                )
+            if int(item["amount"]) <= 0:
+                raise ValidationError(
+                    {"amount": "Количество ингредиента должно быть больше 0!"}
+                )
+            ingredients_list.append(ingredient)
+        return value
 
     @staticmethod
     def ingredient_recipe_create(ingredients_set, recipe):
