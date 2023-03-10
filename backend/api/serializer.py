@@ -1,5 +1,4 @@
 from django.forms import ValidationError
-from django.shortcuts import get_object_or_404
 from djoser.serializers import UserCreateSerializer, UserSerializer
 from drf_extra_fields.fields import Base64ImageField
 from recipes.models import (FavoriteModel, IngredientRecipeModel,
@@ -161,25 +160,25 @@ class ResipeSerializer(serializers.ModelSerializer):
             tags_list.append(tag)
         return
 
-    def validate_ingredients(self, value):
-        ingredients = value
+    def validate(self, data):
+        ingredients = self.initial_data.get('ingredients')
         if not ingredients:
             raise ValidationError(
                 {"ingredients": "Нужен хотя бы один ингредиент!"}
             )
         ingredients_list = []
-        for item in ingredients:
-            ingredient = get_object_or_404(IngredientsModel, id=item["id"])
-            if ingredient in ingredients_list:
+        for ingredient in ingredients:
+            if int(ingredient['amount']) <= 0:
                 raise ValidationError(
-                    {"ingredients": "Ингридиенты не могут повторяться!"}
+                    f'{ingredient} указано не допустимое кол-во ингредиентов :'
+                    f'{ingredient["amount"]}'
                 )
-            if int(item["amount"]) <= 0:
-                raise ValidationError(
-                    {"amount": "Количество ингредиента должно быть больше 0!"}
+            if ingredient['id'] in ingredients_list:
+                raise serializers.ValidationError(
+                    'Ингредиенты не должны повторяться'
                 )
-            ingredients_list.append(ingredient)
-        return value
+            ingredients_list.append(ingredient['id'])
+        return data
 
     @staticmethod
     def ingredient_recipe_create(ingredients_set, recipe):
