@@ -129,24 +129,11 @@ class IngredientResipeSerializer(serializers.ModelSerializer):
     measurement_unit = serializers.ReadOnlyField(
         source="ingredient.measurement_unit"
     )
+    amount = serializers.IntegerField()
 
     class Meta:
         model = IngredientRecipeModel
         fields = ("id", "name", "measurement_unit", "amount")
-
-
-def validate_tags(value):
-    tags = value
-    if not tags:
-        raise ValidationError({"tags": "Нужно выбрать хотя бы один тег!"})
-    tags_list = []
-    for tag in tags:
-        if tag in tags_list:
-            raise ValidationError(
-                {"tags": "Теги должны быть уникальными!"}
-            )
-        tags_list.append(tag)
-    return
 
 
 class ResipeSerializer(serializers.ModelSerializer):
@@ -160,6 +147,19 @@ class ResipeSerializer(serializers.ModelSerializer):
     is_in_shopping_cart = serializers.BooleanField(
         read_only=True, default=False
     )
+
+    def validate_tags(self, value):
+        tags = value
+        if not tags:
+            raise ValidationError({"tags": "Нужно выбрать хотя бы один тег!"})
+        tags_list = []
+        for tag in tags:
+            if tag in tags_list:
+                raise ValidationError(
+                    {"tags": "Теги должны быть уникальными!"}
+                )
+            tags_list.append(tag)
+        return
 
     def validate_ingredients(self, value):
         ingredients = value
